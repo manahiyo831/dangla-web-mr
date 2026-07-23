@@ -46,6 +46,11 @@
   }
   #xrBtn { display: none; background: linear-gradient(135deg, #00e5a0, #00a86b); box-shadow: 0 0 24px rgba(0, 230, 160, 0.45); }
   #startBtn:active, #xrBtn:active { transform: scale(0.97); }
+  #credit {
+    margin-top: 2em; font-size: 0.7em; line-height: 1.8; color: #667788;
+    width: 100%; max-width: 36em; box-sizing: border-box;
+  }
+  #credit a { color: #7fa8c8; text-decoration: underline; }
 
   /* ---- シーン名表示 ---- */
   #sceneLabel {
@@ -130,6 +135,10 @@
   <div id="btnRow">
     <button id="startBtn">開始</button>
     <button id="xrBtn">開始（6DoF）</button>
+  </div>
+  <div id="credit">
+    だんグラ&reg; は<a href="https://ho-lo.jp/" target="_blank" rel="noopener">ホログラム株式会社</a>の製品です。本デモは非公式の個人プロジェクトです。<br>
+    <a href="https://github.com/manahiyo831/dangla-web-mr" target="_blank" rel="noopener">GitHub: manahiyo831/dangla-web-mr</a>
   </div>
 </div>
 
