@@ -130,7 +130,7 @@
   </div>
   <div class="row">
     <label>視野角（片眼） <span class="val" id="fovVal"></span></label>
-    <input type="range" id="fovSlider" min="30" max="100" step="1">
+    <input type="range" id="fovSlider" min="30" max="100" step="0.1">
   </div>
   <div class="row">
     <label>映像スケール <span class="val" id="scaleVal"></span></label>
@@ -191,9 +191,10 @@
   var STORAGE_KEY = 'dangla-settings-v1';
   var DEFAULTS = {
     ipd: 60,        // 瞳孔間距離 [mm]
-    fov: 45,        // 描画視野角（片眼・垂直）[deg]。だんグラの光学FOVに一致させると
+    fov: 41.9,      // 描画視野角（片眼・垂直）[deg]。だんグラの光学FOVに一致させると
                     // 世界が正しく定位する（広すぎると移動量が小さく見え「ついてくる」）。
-                    // 45 は実機（だんグラ+Android）で定位が合った実測値（2026-07）
+                    // 41.9 は公式SDK（HologlaCameraParent.prefab）の設計値。
+                    // 実機較正でも≈45で定位が合っており整合（2026-07）
     scale: 1.0,     // 映像スケール（投影行列ズーム）。AR定位を正しくするには 1.0 のまま
                     // 視野角スライダーで合わせるのが正
     vOffset: 0,     // 上下位置 [px]
@@ -881,7 +882,7 @@
     });
   }
   bindSlider('ipdSlider', 'ipd', 'ipdVal', function (v) { return v.toFixed(0) + ' mm'; });
-  bindSlider('fovSlider', 'fov', 'fovVal', function (v) { return v.toFixed(0) + '°'; });
+  bindSlider('fovSlider', 'fov', 'fovVal', function (v) { return v.toFixed(1) + '°'; });
   bindSlider('scaleSlider', 'scale', 'scaleVal', function (v) { return '×' + v.toFixed(2); });
   bindSlider('vOffSlider', 'vOffset', 'vOffVal', function (v) { return v.toFixed(0) + ' px'; });
   bindSlider('gapSlider', 'lensGap', 'gapVal', function (v) { return v.toFixed(0) + ' px'; });
