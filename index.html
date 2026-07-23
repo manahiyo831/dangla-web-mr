@@ -530,6 +530,10 @@
     var half = (settings.ipd / 1000) / 2;
     eyeL.position.set(-half, 0, 0);
     eyeR.position.set(half, 0, 0);
+    // head はシーングラフ外のため render() では行列が更新されない
+    // （r128 は parent の無いカメラしか自動更新しない）。ここで明示的に更新する。
+    // これが無いとセンサー/XRの姿勢も IPD も一切カメラに反映されない。
+    head.updateMatrixWorld(true);
 
     var scene = scenes[sceneIndex].scene;
     var eyes = settings.swapEyes ? [eyeR, eyeL] : [eyeL, eyeR];
@@ -884,5 +888,6 @@
 })();
 
 </script>
+
 </body>
 </html>
