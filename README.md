@@ -5,6 +5,9 @@
 
 **▶ https://manahiyo831.github.io/dangla-web-mr/**
 
+**対応環境**: 3DoFモード = iPhone / Android ／ **6DoFモード = Android Chrome（ARCore対応端末）のみ**
+（iPhoneのSafariはWebXRのARに非対応のため、6DoFボタンは表示されません）
+
 ## 仕組み
 
 だんグラは光学シースルー型（スマホ画面 → ミラー → ハーフミラーで実視野に重畳）なので、

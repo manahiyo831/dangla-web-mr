@@ -26,7 +26,18 @@
     text-align: center; padding: 24px; box-sizing: border-box;
   }
   #overlay h1 { font-size: 1.7em; margin: 0 0 0.6em; color: #7fd8ff; font-weight: 600; letter-spacing: 0.05em; }
-  #overlay p { font-size: 0.95em; line-height: 1.8; color: #aab8c8; margin: 0 0 1.8em; max-width: 30em; }
+  /* width:100% + max-width で flex 子要素の fit-content はみ出し（縦画面で右端が切れる）を防ぐ */
+  #overlay p {
+    font-size: 0.95em; line-height: 1.8; color: #aab8c8; margin: 0 0 1.2em;
+    width: 100%; max-width: 30em; box-sizing: border-box;
+  }
+  #howto {
+    font-size: 0.8em; line-height: 1.7; color: #8fa5b8; text-align: left;
+    width: 100%; max-width: 36em; box-sizing: border-box; margin: 0 0 1.6em;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  #howto b { color: #aac8dd; font-weight: 600; }
+  #xrNote { color: #ffb86b; }
   #btnRow { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
   #startBtn, #xrBtn {
     font-size: 1.3em; padding: 0.7em 2em; border-radius: 3em; border: none;
@@ -106,10 +117,16 @@
 <div id="overlay">
   <h1>だんグラ Web MRデモ</h1>
   <p>
-    スマホを横向きにして、だんグラにセットしてください。<br>
     画面の黒い部分はハーフミラー越しに透けて、明るい部分だけが<br>
-    空中に浮かぶホログラムとして見えます。タップでシーン切替。<span id="xrNote"></span>
+    空中に浮かぶホログラムとして見えます。
   </p>
+  <div id="howto">
+    <div><b>対応環境</b>: 3DoF = iPhone / Android ／ 6DoF = Android Chrome（ARCore対応端末）のみ</div>
+    <div><b>開始</b>: 6DoFは自動回転をONにして<b>横向きにしてから</b>押す → だんグラにセット</div>
+    <div><b>操作</b>: 画面タップ = シーン切替 ／ 右上⚙ = 調整 ／ 左上✕ = 6DoF終了 ／ 6DoF中は左下に状態表示</div>
+    <div><b>初回調整</b>: 3Dに見えないときは ⚙「左右レンズ間隔」をマイナス側へ（融像するまで内側に寄せる）</div>
+    <div id="xrNote"></div>
+  </div>
   <div id="btnRow">
     <button id="startBtn">開始</button>
     <button id="xrBtn">開始（6DoF）</button>
@@ -699,16 +716,19 @@
   var xrHadRealPose = false;  // 非エミュレート位置が一度でも来たか
   var xrTrackingToastShown = false;
 
+  function noteNoXR() {
+    // 6DoF非対応端末（iPhone等）: 理由を初期画面に明示する
+    document.getElementById('xrNote').textContent =
+      '※この端末では6DoFは利用できません（3DoFで体験できます）';
+  }
   if (navigator.xr && navigator.xr.isSessionSupported) {
     navigator.xr.isSessionSupported('immersive-ar').then(function (supported) {
-      if (!supported) return; // 非対応: 従来の単一「開始」ボタンのまま
+      if (!supported) { noteNoXR(); return; }
       startBtn.textContent = '開始（3DoF）';
       xrBtn.style.display = 'inline-block';
-      document.getElementById('xrNote').textContent =
-        '「開始（6DoF）」は Android Chrome（ARCore対応端末）で利用でき、空間内を歩き回れます。';
-    }).catch(function () {
-      // 判定自体が失敗した環境は非対応扱い（単一ボタンのまま）
-    });
+    }).catch(noteNoXR); // 判定自体が失敗した環境も非対応扱い
+  } else {
+    noteNoXR();
   }
 
   function startXR() {
