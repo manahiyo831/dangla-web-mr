@@ -62,6 +62,12 @@
     background: rgba(20, 30, 40, 0.55); color: #cfeaff;
     font-size: 22px; line-height: 1; cursor: pointer;
   }
+  /* ---- 6DoF トラッキング状態表示（セッション中のみ） ---- */
+  #xrStatus {
+    position: fixed; bottom: 10px; left: 10px; z-index: 40; display: none;
+    font-size: 0.75em; color: #7fd8ff;
+    text-shadow: 0 0 6px rgba(0, 180, 255, 0.6);
+  }
   /* ---- XRセッション終了ボタン（6DoF中のみ表示） ---- */
   #exitXrBtn {
     position: fixed; top: 10px; left: 10px; z-index: 40; display: none;
@@ -112,6 +118,7 @@
 
 <div id="sceneLabel"></div>
 <div id="toast"></div>
+<div id="xrStatus"></div>
 
 <button id="gearBtn" title="設定">&#9881;</button>
 <button id="exitXrBtn" title="6DoFモード終了">&#10005;</button>
@@ -672,6 +679,11 @@
   var savedPixelRatio = 1;
   var xrBtn = document.getElementById('xrBtn');
   var exitXrBtn = document.getElementById('exitXrBtn');
+  var xrStatusEl = document.getElementById('xrStatus');
+  var xrStatusLastT = 0;      // 状態表示のスロットル（~4回/秒）
+  var xrStartT = 0;           // セッション最初のフレームの時刻（XR時刻基準）
+  var xrHadRealPose = false;  // 非エミュレート位置が一度でも来たか
+  var xrTrackingToastShown = false;
 
   if (navigator.xr && navigator.xr.isSessionSupported) {
     navigator.xr.isSessionSupported('immersive-ar').then(function (supported) {
@@ -707,6 +719,12 @@
         session.addEventListener('select', onXRSelect);
         session.addEventListener('end', onXRSessionEnd);
         xrLastT = 0;
+        xrStatusLastT = 0;
+        xrStartT = 0;
+        xrHadRealPose = false;
+        xrTrackingToastShown = false;
+        xrStatusEl.textContent = '6DoF: トラッキング初期化中…';
+        xrStatusEl.style.display = 'block';
         session.requestAnimationFrame(onXRFrame);
         showSceneLabel();
       }).catch(function (err) {
@@ -718,6 +736,13 @@
   }
 
   xrBtn.addEventListener('click', function () {
+    // immersive-ar はセッション開始時の画面の向きでフレームバッファが固定される。
+    // 縦持ちのまま開始すると縦長の左右分割になってしまうため、横向きを必須にする。
+    if (window.innerHeight > window.innerWidth) {
+      showToast('スマホを横向きにしてから「開始（6DoF）」を押してください' +
+        '（画面の自動回転をONにしてください。6DoFは開始時の画面の向きで固定されます）');
+      return;
+    }
     // ユーザー操作（クリック）内で requestSession を呼ぶ必要がある。
     // XR ではフルスクリーン/画面向きロックは不要（セッションがディスプレイを占有する）。
     startXR().catch(function (err) {
@@ -725,17 +750,46 @@
     });
   });
 
+  function fmtMeters(v) {
+    return (v >= 0 ? '+' : '') + v.toFixed(2);
+  }
+
   function onXRFrame(tms, frame) {
     var session = frame.session;
     session.requestAnimationFrame(onXRFrame);
-    var pose = frame.getViewerPose(xrRefSpace);
-    if (!pose) return; // トラッキング未確立のフレームはスキップ
+    if (!xrStartT) xrStartT = tms;
 
-    // 6DoF: 位置と向きの両方をヘッドリグへ反映（eyeL/eyeR は head の子のまま機能）
-    var p = pose.transform.position;
-    var o = pose.transform.orientation;
-    head.position.set(p.x, p.y, p.z);
-    head.quaternion.set(o.x, o.y, o.z, o.w);
+    var pose = frame.getViewerPose(xrRefSpace);
+    if (pose) {
+      // 6DoF: 位置と向きの両方をヘッドリグへ反映（eyeL/eyeR は head の子のまま機能）
+      var p = pose.transform.position;
+      var o = pose.transform.orientation;
+      head.position.set(p.x, p.y, p.z);
+      head.quaternion.set(o.x, o.y, o.z, o.w);
+      if (!pose.emulatedPosition) xrHadRealPose = true;
+    }
+    // pose が null（トラッキング未確立: カメラが塞がれている・暗い等）でも
+    // 毎フレーム必ず描画する。描かないとコンポジタが最後に描いたバッファを
+    // 静止画として表示し続け「固まった」ように見える。head は直前の姿勢を維持。
+
+    // ---- トラッキング状態の画面表示（~4回/秒に間引き） ----
+    if (tms - xrStatusLastT > 250) {
+      xrStatusLastT = tms;
+      if (!pose) {
+        xrStatusEl.textContent = '6DoF: トラッキング初期化中…';
+      } else if (pose.emulatedPosition) {
+        xrStatusEl.textContent = '6DoF: 回転のみ（位置未確立）';
+      } else {
+        xrStatusEl.textContent = '6DoF: OK x=' + fmtMeters(head.position.x) +
+          ' y=' + fmtMeters(head.position.y) + ' z=' + fmtMeters(head.position.z);
+      }
+      // 開始6秒たっても実位置トラッキングが来ない場合は一度だけ案内を出す
+      if (!xrHadRealPose && !xrTrackingToastShown && tms - xrStartT > 6000) {
+        xrTrackingToastShown = true;
+        showToast('位置トラッキングが確立しません。背面カメラが手やだんグラの段ボールで' +
+          '塞がれていないか、部屋が十分明るいかを確認してください');
+      }
+    }
 
     var t = tms / 1000;
     var dt = xrLastT ? Math.min(0.1, t - xrLastT) : 0.016;
@@ -755,7 +809,7 @@
   }
 
   // dom-overlay の UI 要素上のタップが XR の 'select' としても発火するのを防ぐ
-  ['gearBtn', 'settingsPanel', 'exitXrBtn'].forEach(function (id) {
+  ['gearBtn', 'settingsPanel', 'exitXrBtn', 'xrStatus'].forEach(function (id) {
     document.getElementById(id).addEventListener('beforexrselect', function (e) {
       e.preventDefault();
     });
@@ -777,6 +831,7 @@
     onResize();
     canvas.style.visibility = '';
     exitXrBtn.style.display = 'none';
+    xrStatusEl.style.display = 'none';
     head.position.set(0, 0, 0); // 3DoF は頭を原点に置く前提
     running = false;
     overlay.style.display = 'flex'; // ランディング画面に戻る
