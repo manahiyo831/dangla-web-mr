@@ -129,6 +129,10 @@
     <input type="range" id="ipdSlider" min="0" max="100" step="1">
   </div>
   <div class="row">
+    <label>視野角（片眼） <span class="val" id="fovVal"></span></label>
+    <input type="range" id="fovSlider" min="30" max="100" step="1">
+  </div>
+  <div class="row">
     <label>映像スケール <span class="val" id="scaleVal"></span></label>
     <input type="range" id="scaleSlider" min="0.5" max="2.0" step="0.01">
   </div>
@@ -187,7 +191,10 @@
   var STORAGE_KEY = 'dangla-settings-v1';
   var DEFAULTS = {
     ipd: 60,        // 瞳孔間距離 [mm]
-    scale: 1.0,     // 映像スケール（投影行列ズーム）
+    fov: 70,        // 描画視野角（片眼・垂直）[deg]。だんグラの光学FOVに一致させると
+                    // 世界が正しく定位する（広すぎると移動量が小さく見え「ついてくる」）
+    scale: 1.0,     // 映像スケール（投影行列ズーム）。AR定位を正しくするには 1.0 のまま
+                    // 視野角スライダーで合わせるのが正
     vOffset: 0,     // 上下位置 [px]
     lensGap: 0,     // 左右レンズ間隔の補正 [px]（+で両ビューポートが外側へ）
     mirrorH: false, // 左右反転（各眼の映像を水平ミラー）
@@ -550,6 +557,7 @@
       var shift = (i === 0 ? -gap : gap) / 2;
       var x = i * halfW + shift;
       var cam = eyes[i];
+      cam.fov = settings.fov;
       cam.aspect = halfW / H;
       cam.updateProjectionMatrix();
       // 映像スケール（ズーム）とミラー反転を NDC 側で適用:
@@ -872,6 +880,7 @@
     });
   }
   bindSlider('ipdSlider', 'ipd', 'ipdVal', function (v) { return v.toFixed(0) + ' mm'; });
+  bindSlider('fovSlider', 'fov', 'fovVal', function (v) { return v.toFixed(0) + '°'; });
   bindSlider('scaleSlider', 'scale', 'scaleVal', function (v) { return '×' + v.toFixed(2); });
   bindSlider('vOffSlider', 'vOffset', 'vOffVal', function (v) { return v.toFixed(0) + ' px'; });
   bindSlider('gapSlider', 'lensGap', 'gapVal', function (v) { return v.toFixed(0) + ' px'; });
